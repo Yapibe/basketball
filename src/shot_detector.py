@@ -93,7 +93,7 @@ class ShotClassifier:
         self.r = rim_radius
 
     def _fit_parabola(self, seq: List[Dict]) -> Tuple[float, float, float]:
-        # Fit y = ax^2 + bx + c in pixel space
+        """Fit ``y = ax^2 + bx + c`` to the ball track using least squares."""
         xs = np.array([p["x"] for p in seq])
         ys = np.array([p["y"] for p in seq])
         coeffs = np.polyfit(xs, ys, deg=2)
