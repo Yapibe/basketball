@@ -11,7 +11,7 @@ dependencies = [
     "ultralytics>=8.1.30",
     "numpy>=1.26.0",
     "mediapipe>=0.10.9",  # reserved for future pose integration
-    "gradio>=4.27.0",
+    "gradio>=4.19.2",  # Updated for streaming support
     "torch>=2.2.0",  # for YOLO
     "torchvision>=0.17.0",  # for YOLO
 ]
