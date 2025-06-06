@@ -102,27 +102,46 @@ class ShotClassifier:
     def classify(self, tracks: List[Dict], rim: Tuple[Tuple[int, int], int]) -> List[Dict]:
         rim_center, rim_radius = rim
         shots: List[Dict] = []
-        # TODO: simple segmentation by gaps > N frames
         if not tracks:
             return shots
 
-        # Naive single‑shot assumption:
-        seq = tracks
-        a, b, c = self._fit_parabola(seq)
+        MIN_LEN = 10  # minimum frames that constitute a shot
+        MAX_GAP = 2   # gap tolerance between consecutive frames
 
-        # solve for y = rim plane at x coordinate where ball crosses rim height (cy)
-        # Simplification: use last downward point as crossing
-        cross = seq[-1]
-        dist = math.hypot(cross["x"] - rim_center[0], cross["y"] - rim_center[1])
+        current_shot: List[Dict] = []
+        for track in tracks:
+            if not current_shot or track["frame"] - current_shot[-1]["frame"] <= MAX_GAP:
+                current_shot.append(track)
+                continue
 
-        made = dist < rim_radius * 0.9  # epsilon = 10%
-        shots.append(
-            {
-                "id": 1,
-                "made": bool(made),
-                "t": (seq[-1]["frame"] - seq[0]["frame"]) / 30.0,  # assuming 30 fps
-            }
-        )
+            if len(current_shot) >= MIN_LEN:
+                a, b, c = self._fit_parabola(current_shot)
+                cross = current_shot[-1]
+                dist = math.hypot(cross["x"] - rim_center[0], cross["y"] - rim_center[1])
+                made = dist < rim_radius * 0.9
+                shots.append(
+                    {
+                        "id": len(shots) + 1,
+                        "made": bool(made),
+                        "t": (current_shot[-1]["frame"] - current_shot[0]["frame"]) / 30.0,
+                    }
+                )
+            current_shot = [track]
+
+        # Evaluate the last accumulated sequence
+        if len(current_shot) >= MIN_LEN:
+            a, b, c = self._fit_parabola(current_shot)
+            cross = current_shot[-1]
+            dist = math.hypot(cross["x"] - rim_center[0], cross["y"] - rim_center[1])
+            made = dist < rim_radius * 0.9
+            shots.append(
+                {
+                    "id": len(shots) + 1,
+                    "made": bool(made),
+                    "t": (current_shot[-1]["frame"] - current_shot[0]["frame"]) / 30.0,
+                }
+            )
+
         return shots
 
 
