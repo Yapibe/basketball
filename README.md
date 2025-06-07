@@ -53,5 +53,18 @@ If automatic rim detection fails, edit `src/shot_detector.py` ► `RimDetector.l
 
 ## Sample Clip  (optional)
 
-Download a 5‑second test clip (public domain)  
+Download a 5‑second test clip (public domain)
 <https://files.sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4>
+
+## Roboflow Shot Detection
+
+An optional helper, `roboflow_detector.py`, demonstrates how to run
+Roboflow models. Install the extra dependency and run:
+
+```bash
+uv pip install inference-sdk
+python -m roboflow_detector path/to/image.jpg
+```
+
+Set the environment variable `ROBOFLOW_API_KEY` to use your own API key
+instead of the built in demo key.

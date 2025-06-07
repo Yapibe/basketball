@@ -14,6 +14,7 @@ dependencies = [
     "gradio>=4.19.2",  # Updated for streaming support
     "torch>=2.2.0",  # for YOLO
     "torchvision>=0.17.0",  # for YOLO
+    "inference-sdk>=1.0.0",  # Roboflow models
 ]
 
 [tool.uv]  # uv‑specific settings can remain default

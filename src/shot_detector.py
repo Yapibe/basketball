@@ -105,7 +105,7 @@ class ShotClassifier:
         if not tracks:
             return shots
 
-        MIN_LEN = 10  # minimum frames that constitute a shot
+        MIN_LEN = 3  # minimum frames that constitute a shot
         MAX_GAP = 2   # gap tolerance between consecutive frames
 
         current_shot: List[Dict] = []
