@@ -13,8 +13,7 @@ dependencies = [
     "mediapipe>=0.10.9",  # reserved for future pose integration
     "gradio>=4.19.2",  # Updated for streaming support
     "torch>=2.2.0",  # for YOLO
-    "torchvision>=0.17.0",  # for YOLO
-    "inference-sdk>=1.0.0",  # Roboflow models
+    "torchvision>=0.17.0"  # for YOLO
 ]
 
 [tool.uv]  # uv‑specific settings can remain default

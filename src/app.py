@@ -1,70 +1,90 @@
-"""
-Gradio web interface for basketball shot analysis.
-"""
-import os
 import gradio as gr
-from shot_detector import RimDetector, BallTracker, ShotClassifier
 import cv2
-import tempfile
+import numpy as np
+from pose_stream import run_pose, select_device
+import argparse
 
-def analyze_video(video_path: str, cpu_only: bool) -> str:
-    """Process uploaded video and return analysis results."""
-    if cpu_only:
-        os.environ["CUDA_VISIBLE_DEVICES"] = ""
-        
-    cap = cv2.VideoCapture(video_path)
-    if not cap.isOpened():
-        return "Error: Could not open video file"
-        
-    def frame_iter():
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if not ret:
-                break
-            yield frame
-            
-    detector = RimDetector()
-    tracker = BallTracker()
-    classifier = ShotClassifier()
-    
-    try:
-        # Stream results as they come in
-        rim = detector.locate(frame_iter())
-        cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-        tracks = tracker.track(frame_iter())
-        shots = classifier.classify(tracks, rim)
-        
-        results = []
-        for shot in shots:
-            result = f"Shot #{shot['id']} — {'MADE' if shot['made'] else 'MISS'} (flight {shot['t']:.2f}s)"
-            results.append(result)
-            
-        return "\n".join(results)
-        
-    finally:
-        cap.release()
+def process_frame(frame, fps):
+    """Convert frame to RGB for Gradio display."""
+    return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-def create_ui():
-    """Create and launch Gradio interface."""
-    with gr.Blocks(title="Shot Coach") as demo:
-        gr.Markdown("# 🏀 Shot Coach")
-        gr.Markdown("Upload a basketball video to analyze shot attempts.")
+def create_interface(debug: bool = False):
+    """Create and launch the Gradio interface."""
+    with gr.Blocks(title="Live Pose Detection") as demo:
+        gr.Markdown("# 🏃 Live Pose Detection")
         
         with gr.Row():
-            video_input = gr.Video(label="Upload Video")
-            cpu_checkbox = gr.Checkbox(label="CPU Only", value=False)
+            with gr.Column():
+                # Camera input
+                camera = gr.Video(
+                    label="Webcam Feed",
+                    mirror_webcam=True,
+                    height=540,
+                    width=960,
+                    include_audio=False,
+                    autoplay=True
+                )
+                
+                # Controls
+                with gr.Row():
+                    cpu_only = gr.Checkbox(
+                        label="CPU Only",
+                        value=False,
+                        info="Force CPU inference"
+                    )
+                    camera_index = gr.Number(
+                        label="Camera Index",
+                        value=0,
+                        precision=0,
+                        minimum=0,
+                        maximum=10
+                    )
+                
+                # Status indicators
+                with gr.Row():
+                    fps_display = gr.Textbox(
+                        label="FPS",
+                        value="0.0",
+                        interactive=False
+                    )
+                    device_status = gr.Textbox(
+                        label="Device",
+                        value="Initializing...",
+                        interactive=False
+                    )
             
-        analyze_btn = gr.Button("Run Analysis")
-        output = gr.Textbox(label="Results", lines=10)
+            # Output image
+            output_image = gr.Image(
+                label="Pose Detection",
+                height=540,
+                width=960
+            )
         
-        analyze_btn.click(
-            fn=analyze_video,
-            inputs=[video_input, cpu_checkbox],
-            outputs=output
+        def process_video(camera_index, cpu_only):
+            device = select_device(force_cpu=cpu_only)
+            device_status = f"{device} {'⚡' if device == 'GPU' else ''}"
+            
+            for frame, fps in run_pose(
+                cam_index=int(camera_index),
+                use_gpu=(device == "GPU"),
+                debug=debug
+            ):
+                yield process_frame(frame, fps), f"{fps:.1f}", device_status
+        
+        # Set up the video processing
+        camera.change(
+            process_video,
+            inputs=[camera_index, cpu_only],
+            outputs=[output_image, fps_display, device_status],
+            every=1/30  # Update at 30 FPS
         )
-        
+    
     return demo
 
 if __name__ == "__main__":
-    demo = create_ui()
-    demo.launch()
+    parser = argparse.ArgumentParser(description="Live Pose Detection")
+    parser.add_argument("--debug", action="store_true", help="Show OpenCV debug window")
+    args = parser.parse_args()
+    
+    demo = create_interface(debug=args.debug)
+    demo.launch(share=False) 
